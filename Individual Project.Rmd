@@ -1,0 +1,769 @@
+---
+Title: "Individual Project"
+Name: "Ajay Kanubhai Patel"
+Date: "2023-08-02"
+output:
+  word_document: default
+  pdf_document: default
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+#Loading the package
+
+```{r}
+#Load packages to convert file in PDF.
+
+if(!require(tinytex)){install.packages("tinytex")}
+
+
+#Load ISLR2
+
+if(!require(ISLR2)){install.packages("ISLR2")}
+library(ISLR2)
+
+if(!require(readxl)){install.packages("readxl")}
+library("readxl")
+
+if(!require(pastecs)){install.packages("tidyverse")}
+library("tidyverse")
+
+if(!require(pastecs)){install.packages("pastecs")}
+library("pastecs")
+
+if(!require(lattice)){install.packages("lattice")}
+library("lattice")
+
+if(!require(vcd)){install.packages("vcd")}
+library("vcd")
+
+if(!require(HSAUR)){install.packages("HSAUR")}
+library("HSAUR")
+
+if(!require(rmarkdown)){install.packages("rmarkdown")}
+library("rmarkdown")
+
+if(!require(ggplot2)){install.packages("ggplot2")}
+library("ggplot2")
+
+if(!require(stargazer)){install.packages("stargazer")}
+library("stargazer")
+
+if(!require(caret)){install.packages("caret")}
+library("caret")
+
+if(!require(leaps)){install.packages("leaps")}
+library("leaps")
+
+if(!require(tidyverse)){install.packages("tidyverse")}
+library("tidyverse")
+
+if(!require(rsample)){install.packages("rsample")}
+library(rsample)
+
+if(!require(rpart.plot)){install.packages("rpart.plot")}
+library(rpart.plot)
+
+if(!require(keras)){install.packages("keras")}
+library(keras)
+
+if(!require(factoextra)){install.packages("factoextra")}
+library(factoextra)
+
+if(!require(mclust)){install.packages("mclust")}
+library(mclust)
+
+if(!require(glmnet)){install.packages("glmnet")}
+library(glmnet)
+
+if(!require(tsibble)){install.packages("tsibble")}
+library(tsibble)
+
+if(!require(forecast)){install.packages("forecast")}
+library(forecast)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/PREDICTIVE ANALYTICS/SEM-2/STAT FORECASTING/INDIVIDUAL PROJECT")
+
+```
+
+
+```{r}
+
+library(astsa, quietly=TRUE, warn.conflicts=FALSE)
+library(ggplot2)
+library(knitr)
+library(printr)
+library(plyr)
+library(dplyr)
+library(lubridate)
+library(gridExtra)
+library(reshape2)
+library(TTR)
+library(fpp3)
+library(seasonal)
+library(tidyverse)
+library(stringr)
+```
+
+This section is for the basic set up. It will clear all the plots, the
+console and the workspace. It also sets the overall format for numbers.
+
+```{r}
+if(!is.null(dev.list())) dev.off()
+cat("\014") 
+rm(list=ls())
+options(scipen=9)
+```
+
+1. Data 
+
+
+What is the motive behind choosing this data set and its possible
+implementation in real life situation?
+
+The requirements of project suggest that data has a time dimension
+so that I can perform time-series analysis.
+Moreover, In order to create a forecasting model and acquire a 
+better understanding of the dynamics of the labor market, we examine
+a time series data set of unemployment rates in this study. The 
+selection of unemployment data is driven by its importance to the 
+economy and society. Making informed judgments can benefit 
+companies, job seekers, and policymakers by having a thorough 
+understanding of unemployment trends and future rate forecasts. Our 
+goal is to provide answers to inquiries like: What are the 
+long-term patterns in unemployment? Can we forecast future 
+unemployment rates to help with labor force planning and look for 
+seasonal patterns?
+
+
+Data Source: The data set was downloaded from FRED. Federal Reserve 
+Economic Data (FRED) is an online database consisting of 
+hundreds of thousands of economic data time series from scores 
+of national, international, public, and private sources 
+(Federal Reserve Economic Data, 2023).
+
+Link to download data set: 
+https://fred.stlouisfed.org/series/UNRATE  
+
+
+Note: More information related to this data set is given further
+after analyzing it in R.
+
+
+```{r}
+
+library(fpp3)
+library(tidyr)
+library(lubridate)
+library(readr)
+
+
+setwd("C:/PREDICTIVE ANALYTICS/SEM-2/STAT FORECASTING/INDIVIDUAL PROJECT")
+Project <- read_xls("C:/PREDICTIVE ANALYTICS/SEM-2/STAT FORECASTING/INDIVIDUAL PROJECT/Unemployment.xls")
+summary(Project)
+
+
+dim(Project)
+str(Project)
+class(Project$observation_date)
+head(Project$observation_date)
+
+Project$observation_date <- as.Date(Project$observation_date, format="%m/%d/%Y")
+
+
+```
+
+We examine a time series data set of unemployment rates covering 
+the period from January 1948 to August 2023 in this study. The 
+unemployment rate of those who currently reside in 1 of the 50 
+states or the District of Columbia is observed monthly in the 
+data set. Our goal is to learn more about the unemployment rate's 
+seasonality, historical trends, and possibilities for forecasting.
+
+There are 908 observations in all in the data set and 
+observation_date and UNRATE two variables given, with a maximum 
+unemployment rate of 14.7% and a minimum of 2.5%. An average level 
+of unemployment over time is indicated by the 5.714% mean 
+unemployment rate for the entire period. In addition, There is no
+Null value present in our data set.
+
+Datatype: observation_date is in POSIXct and POSIXt format while
+UNRATE is in numeric format.
+
+
+```{r}
+
+Project <- Project[order(Project$observation_date),]
+min_d <- min(Project$observation_date)
+max_d <- max(Project$observation_date)
+Project_ts <- ts(Project$UNRATE, start = c(1948,01), end = c(2023,08) , frequency = 12)
+summary(Project_ts)
+head(Project_ts)
+str(Project_ts)
+
+#Let's check whether we have tranformed data in time-series or not?
+class(Project_ts)
+
+```
+
+It is good idea to import data in Chronological order before
+transforming into time-series. From above functions, we can see
+the observation date is starting from 1948-01-01 to 2023-08-01.
+Moreover, we are declaring monthly frequency.
+
+-------------------------------------------------------------------
+
+2. Visualization
+
+
+```{r}
+
+library(TSstudio)
+library(plotly)
+
+ts_plot(Project_ts,
+        title = "Time-Series Plot of Unemployment Rate",
+        Xtitle = "observation_date",
+        Ytitle = "Unemployement Rate")
+
+```
+
+Here, we can observe cyclic pattern in time-series plot.Moreover,
+this is an unemployment data so seasonality is not important.
+There is an outlier clearly observed from above plot. Additionally, 
+there is no trend in our time-series data, however, if we carefully 
+observe time series then we can see upward trend from 1950 to 1983.
+
+About stationarity:
+Here, mean and variance is constant over time and no seasonality
+Present in our time-series so we can consider it as stationary 
+time-series.
+
+
+```{r}
+
+install.packages("forecast")
+Project_ts %>% ggAcf(plot=FALSE)
+
+acf(Project$UNRATE, main = "ACF Plot of Unemployement Rate")
+pacf(Project_ts, main = "PACF Plot of Unemployement Rate")
+
+```
+
+I have created Autocorrelation Function (ACF) and Partial 
+Autocorrelation Function (PACF) to understand autocorrelation in
+our data and to find patterns (Udit, 2022).
+
+From ACF, we can observe there isn't any seasonality. In addition,
+there is a trend as autocorrelations are strong and positive.
+When we observe lag=0 which compare with itself which is 1 that 
+means the re is no concern regarding our data. blue dotted line 
+represents level of significant and we can clearly see that all the 
+lines are above blue dotted line so all the lines are significant. 
+we can conclude that there is autocorrelation in our data. Apart 
+from this, there is autocorrelation so we can conclude that there 
+isn't white noise in our series.
+
+
+It is good idea to ignore seasonality in data set like unemployment.
+let's plot graph and observe.
+
+---------------------------------------------------------------------
+
+3. Transformations
+
+Moving Average
+
+```{r}
+MA_12 <- forecast::ma(Project_ts, order = 12, centre = TRUE)
+plot(Project_ts)
+lines(MA_12, col=5, lwd=3)
+```
+Above we have calculated moving average of order 12 and
+then plotted moving average line on time-series plot.We can clearly
+see that our moving average line is completely overlapping on our
+time-series plot which indicated that there is no trend and 
+seasonality in the data. Moreover, it represents pattern is 
+relatively stable.
+
+
+```{r}
+detrended_ts <- Project_ts - MA_12
+
+plot(Project_ts, main = "Original Time Series", ylab = "Unemployment Rate", xlab = "observation_date")
+lines(detrended_ts, col = 4)
+legend("topright", legend = c("Original", "Detrended"), col = c(1, 4), lty = 1)
+
+```
+
+
+------------------------------------------------------------------
+
+
+Decomposition of Time-Series using classical Method.
+
+Do we need to transform series using Box-Cox Transformation?
+Here, we can observe that there is no presence of heteroskedasticity
+which means variance is neither increases or decreases over time
+so there is no need of transformation (Labrinos, 2023c).
+
+What kind of decomposition and why?
+here, additive decomposition would be more suitable option as 
+magnitude of fluctuation remain constant over time (Labrinos, 2023c).
+
+```{r}
+
+library(ggplot2)
+library(forecast)
+
+plot(Project_ts, type="h")
+
+# Decompose the time series
+
+decomposed <- decompose(Project_ts)
+
+# Plot the decomposed components
+plot(decomposed)
+
+
+```
+
+Seasonal component of time-series.
+
+```{r}
+
+plot(decomposed$seasonal)
+
+```
+When we present season part of time series via graph when can see
+it represented on the scale of -0.05 to 0.10. Moreover, it is
+good idea to ignore seasonality in data set like unemployment.
+
+Trend component.
+
+```{r}
+
+plot(decomposed$trend)
+
+```
+When we observe graph of trend of our time-series we can see it is
+almost similar to our original series. It is represented on the scale
+between 4 to 10.
+
+
+```{r}
+
+plot(decomposed$random)
+
+```
+We can observes errors from above graphs and it is quite stable, 
+however, there is large spike can be observe at around 2020.
+
+
+Let's create different types of plots and observe.
+
+```{r}
+ggseasonplot(Project_ts)
+
+```
+
+Here, I have created graph which seems really creative and
+easy to observe. In above graph, we can clearly see that there is 
+one year which is represented is red color has the highest unemployment
+rate. Moreover, when we observe all other year from January to December
+there is approximately constant value of unemployment rate throughout
+year.
+
+
+
+```{r}
+
+ggseasonplot(Project_ts, polar=TRUE)
+
+```
+From above polar graph, we can clearly see in one year month of April
+has the highest unemployment rate.
+
+
+
+```{r}
+
+ggsubseriesplot(Project_ts)
+
+```
+
+From all the graphs, we have seen value which is extremely large as
+compared to other values of unemployment rate so we can research what
+did happen at that time what causes unemployment which was unseen in
+history. we can also get insight from the events occurred at that time
+which were responsible for higher unemployment and we can prevent to
+happening in future.
+
+-------------------------------------------------------------------
+
+STL Method for time series decomposition.
+
+```{r}
+
+stl_decomp <- stl(Project_ts, s.window = "periodic")
+stl_trend <- stl_decomp$time.series[, "trend"]
+stl_seasonal <- stl_decomp$time.series[, "seasonal"]
+stl_residual <- stl_decomp$time.series[, "remainder"]
+
+plot(stl_decomp)
+plot(stl_trend)
+plot(stl_seasonal)
+plot(stl_residual)
+
+```
+
+
+
+
+
+-------------------------------------------------------------------
+
+4. Forecasting and Analysis
+
+Forecasting with benchmark methods
+
+1.Average Method
+
+```{r}
+
+average_method <-Project_ts %>% meanf(h=10)
+average_method
+autoplot(average_method)
+
+avg_res <- Project_ts %>% meanf(h=10) %>% residuals()
+
+Box.test(avg_res, fitdf = 0, type = "Lj")
+
+checkresiduals(Project_ts %>% meanf(h=10))
+
+```
+
+When we observe above graphs, we clearly see that mean is not zero
+and there is presence of outlier. Moreover, variance is fluctuating.
+residuals is slightly right skewed. Additionally, p-value of 
+Ljung-Box test is extremely small which suggest that series is not
+white noise and this is clearly seen in ACF plot that all lags are
+statistically significant.
+
+--------------------------------------------------------------------
+
+2. Naive Method
+
+```{r}
+
+naive_method <-Project_ts %>% naive(h=10)
+naive_method
+autoplot(naive_method)
+
+naive_res <- Project_ts %>% naive(h=10) %>% residuals()
+
+
+Box.test(naive_res, fitdf = 0, type = "Lj")
+
+checkresiduals(Project_ts %>% naive(h=10))
+
+```
+
+From naive method, mean is zero and variance is constant over time. However, there is an outlier present in the series. Residuals are 
+normally distributed. From 	Ljung-Box test, p-value is extemely
+high which suggests that series is white noise and ACF plot also justify this as all lags are below significant line.
+
+-----------------------------------------------------------------------------
+
+Seasonal Naive Method
+
+```{r}
+
+snaive_method <-Project_ts %>% snaive(h=10)
+snaive_method
+autoplot(snaive_method)
+
+snaive_res <- Project_ts %>% snaive(h=10) %>% residuals()
+
+
+Box.test(snaive_res, fitdf = 0, type = "Lj")
+
+checkresiduals(Project_ts %>% snaive(h=10))
+
+```
+
+From snaive method, mean is not zero. There is sign of outlier. 
+Moreover, distribution is slightly right skewed. Additionally,
+Ljung-Box test test value is quite small which indicates absense of
+white noise and ACF plot also justify this as all lags are 
+statistically significant.
+
+---------------------------------------------------------------------------
+
+4. Drift Method
+```{r}
+drift_method <-Project_ts %>% rwf(h=10, drift = TRUE)
+drift_method
+autoplot(drift_method)
+
+drift_res <- Project_ts %>% rwf(h=10, drift = TRUE) %>% residuals()
+
+Box.test(drift_res, fitdf = 0, type = "Lj")
+
+checkresiduals(Project_ts %>% rwf(h=10, drift = TRUE))
+
+```
+
+From Drift method, residuals have zero mean and variance is constant
+over time, however, there is an outlier. Residuals are normally 
+distributed. Apart from this, all lags are below significant level 
+and Ljung-Box test value is quite high which suggests that series 
+has white noise.
+
+
+
+---------------------------------------------------------
+
+Conclusion: From residual perspective, each method violates one or more 
+conditions so we need to do further operations mentioned below.
+1. if residual are not normally distributed then use bootstraps and and
+   create prediction intervals (Lambrinos, 2023e).
+   
+we cannot say which method is the most suitable method for our
+timeseries from residual test.
+   
+
+
+```{r}
+
+plotting <- autoplot (Project_ts) +
+ autolayer (meanf (Project_ts, h = 10),
+  series="Mean", PI = FALSE) +
+ autolayer (naive(Project_ts, h = 10),
+  series = "Naïve", PI = FALSE) +
+ autolayer (snaive(Project_ts, h = 10),
+  series = "Seasonal naïve", PI=FALSE) +
+autolayer (rwf(Project_ts, h = 10, drift =  TRUE),
+  series = "Drift", PI=FALSE) +
+ ggtitle("Forecasts of Unemployment Rate") +
+ xlab ("Year") + ylab ("Unemployment Rate") +
+ guides (colour = guide_legend (title = "Forecast"))
+
+
+plotting + xlim(2020, 2024)
+
+
+```
+
+
+--------------------------------------------------------------------
+
+
+We can divide data set into  training and test data set  and then
+we can calculate RMSE to decide which method is the best for our
+time series forecasting.
+
+Let's divide Data into train and test.
+
+```{r}
+
+horizon <- 10
+train_data <- window(Project_ts, start = c(1948, 1), end = c(2023, 8 - horizon))
+test_data <- window(Project_ts, start = c(2023, 8 - horizon + 1), end = c(2023, 8))
+
+autoplot(test_data, level=NULL)
+
+```
+
+IN train data set we are including data from January 1948 to October 
+2022. While, test data set contains data from September 2022 to
+August 2023.
+
+----------------------------------------------------------------------
+
+Mean Forecast: All future time periods are forecasted using the 
+historical mean of the data, which is known as the mean forecast. This 
+model makes the assumption that values in the future will resemble the 
+historical mean. It's a very basic, traditional model. In our data
+unemployment rate is reasonably stable, it might be appropriate 
+(Labrinos, 2023d).
+
+
+```{r}
+
+mean_model <- meanf(train_data, h = horizon)
+
+mean_forecast <- forecast(mean_model, h = horizon)
+
+forecast_values_mean <- mean_forecast$mean
+actual_values_mean <- test_data
+
+# Calculate MAE
+mae_mean <- mean(abs(forecast_values_mean  - actual_values_mean))
+
+# Calculate MSE
+mse_mean <- mean((forecast_values_mean - actual_values_mean)^2)
+
+# Calculate RMSE
+rmse_mean <- sqrt(mse_mean)
+
+
+```
+
+
+
+
+-------------------------------------------------------------------
+
+Let's try naive forecasting as in our data no seasonality and trend 
+are present so it is good idea to go with this method to forecast
+our time-series (Labrinos, 2023d).
+
+
+```{r}
+
+naive_model <- naive(train_data, h = horizon)
+
+# Generate forecasts
+naive_forecast <- forecast(naive_model, h = horizon)
+
+
+forecast_values_naive <- naive_forecast$mean
+actual_values_naive <- test_data
+
+# Calculate MAE
+mae_naive <- mean(abs(forecast_values_naive - actual_values_naive))
+
+# Calculate MSE
+mse_naive <- mean((forecast_values_naive - actual_values_naive)^2)
+
+# Calculate RMSE
+rmse_naive <- sqrt(mse_naive)
+
+```
+
+
+------------------------------------------------------------------------
+
+Seasonal Naive Forecast:A modification of the naïve forecast that takes 
+seasonality into consideration is the seasonal naive forecast. It 
+forecasts the equivalent season of the current year using the 
+observation from the same season the year before. In our data there is 
+no seasonal pattern present so it is not suitable method to forecast
+time-series with this method using our data, however, I am going to
+perform and check the results for better understanding (Labrinos, 2023d).
+
+
+```{r}
+
+snaive_model <- snaive(train_data, h = horizon)
+
+snaive_forecast <- forecast(snaive_model, h = horizon)
+
+forecast_values_snaive <- snaive_forecast$mean
+actual_values_snaive <- test_data
+
+# Calculate MAE
+mae_snaive <- mean(abs(forecast_values_snaive - actual_values_snaive))
+
+# Calculate MSE
+mse_snaive <- mean((forecast_values_snaive - actual_values_snaive)^2)
+
+# Calculate RMSE
+rmse_snaive <- sqrt(mse_snaive)
+
+```
+
+
+-------------------------------------------------------------------------
+
+The Drift Forecast (DRIFT) is a basic model that assumes a linear trend in the collected data. By extending the trend from the most recent data points, it predicts future values (Labrinos, 2023d).
+
+
+```{r}
+
+drift_model <- rwf(train_data, drift = TRUE, h = horizon)
+
+drift_forecast <- forecast(drift_model, h = horizon)
+
+forecast_values_drift <- drift_forecast$mean
+actual_values_drift <- test_data
+
+# Calculate MAE
+mae_drift <- mean(abs(forecast_values_drift - actual_values_drift))
+
+# Calculate MSE
+mse_drift <- mean((forecast_values_drift - actual_values_drift)^2)
+
+# Calculate RMSE
+rmse_drift <- sqrt(mse_drift)
+
+```
+
+-----------------------------------------------------------------
+
+We are using same data set for forecasting so it is good idea to
+find Absolute Error (MAE) and Root Mean Squared Error and select
+model which has the lowest value (Labrinos, 2023e).
+
+
+```{r}
+mae_mean
+mae_naive
+mae_snaive
+mae_drift
+```
+
+```{r}
+rmse_mean
+rmse_naive
+rmse_snaive
+rmse_drift
+```
+
+From above Mean Absolute Error (MAE) and Root Mean Squared Error values
+(RMSE) we can see that naive and drift forecast have lower values
+compare to other forecast method so from MAE and RMSE perspective 
+naive and drift methods are more suitable (Wee5:BasicForecastingII, 2023e).
+
+---------------------------------------------------------------------
+
+References:
+
+1. Lambrinos,P.(2023a).Week 1: Introduction to Forecasting [Powerpoint     slide]
+    https://conestoga.desire2learn.com/d2l/le/content/879796/viewContent     /18588762/View
+    
+2.  Lambrinos,P.(2023b).Week 2: Time Series Graphics
+    [Powerpoint slide] 
+    https://conestoga.desire2learn.com/d2l/le/content/879796/viewContent     /18588763/View
+    
+3. Lambrinos,P.(2023c).Week 3: Time Series Decomposition
+   [Powerpoint slide] 
+   https://conestoga.desire2learn.com/d2l/le/content/879796/viewContent/    18588764/View
+    
+4. Lambrinos,P.(2023d).Week 4: Basic Forecasting
+   [Powerpoint slide] 
+   https://conestoga.desire2learn.com/d2l/le/content/879796/viewContent/    18588765/View
+    
+5. Lambrinos,P.(2023e).Week 5: Basic Forecasting II
+   [Powerpoint slide] 
+   https://conestoga.desire2learn.com/d2l/le/content/879796/viewContent/    18588766/View
+
+6. Lambrinos,P.(2023f).Week 6: Time Series Regression
+   [Powerpoint slide]
+   https://conestoga.desire2learn.com/d2l/le/content/879796/viewContent/    18588767/View
+
+7. Udit.(2022, Dec 30). Deciphering ACF and PACF Plots: A Guide to Time    Series Forecasting
+   https://itsudit.medium.com/deciphering-acf-and-pacf-plots-a-guide-to-    time-series-forecasting-3323948935fb#:~:text=The%20ACF%20plot%20can%    20be,likely%20be%20a%20good%20fit.
+   
+8. U.S. Bureau of Labor Statistics. (2023, October 11). Unemployment       Rate [UNRATE], retrieved from FRED, Federal Reserve Bank of St.         Louis.
+   https://fred.stlouisfed.org/series/UNRATE  
+   
+9. Federal Reserve Economic Data: Your trusted data source since 1991.     (n.d.).
+   https://fredhelp.stlouisfed.org/fred/about/about-fred/what-is-fred/
+
+
